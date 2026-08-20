@@ -1,0 +1,17 @@
+.venv/
+.git/
+.gitignore
+.python-version
+__pycache__/
+*.pyc
+
+# dados e notebooks nao entram na imagem de serving
+data/
+*.ipynb
+src/nyc_taxi_regression/train_model.py
+
+# segredos ficam de fora: config vai por variavel de ambiente no Lambda
+.env
+.env.*
+
+README.md

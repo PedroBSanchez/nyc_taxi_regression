@@ -1,0 +1,25 @@
+# Virtual environments
+.venv/
+
+# Datasets baixados
+data/
+
+# Python
+__pycache__/
+*.pyc
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+crash.log
+
+# Segredos
+.env
+.env.*
+!.env.example
+
+
+# modelos
+*.pkl
