@@ -48,7 +48,7 @@ variable "app_secrets" {
 variable "github_repository" {
   description = "Onwer/Repo authorized to assume an implementation role"
   type        = string
-  default     = "PedroBSanchez/nyc_taxi_regression"
+  default     = "PedroBSanchez@68929967/nyc_taxi_regression@1340633593"
 }
 
 variable "state_bucket" {
