@@ -12,3 +12,8 @@ output "api_endpoint" {
   description = "API Public URL"
   value       = aws_apigatewayv2_stage.default.invoke_url
 }
+
+output "github_actions_role_arn" {
+  description = "Role assumed by GitHub Actions via OIDC"
+  value       = aws_iam_role.github_actions.arn
+}

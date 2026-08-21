@@ -40,3 +40,19 @@ variable "app_secrets" {
   default     = []
 }
 
+
+
+
+# CI/CD
+
+variable "github_repository" {
+  description = "Onwer/Repo authorized to assume an implementation role"
+  type        = string
+  default     = "PedroBSanchez/nyc_taxi_regression"
+}
+
+variable "state_bucket" {
+  description = "Bucket of remote terraform state file"
+  type        = string
+  default     = "nyc-taxi-regression-tfstate-769291435352"
+}
