@@ -1,0 +1,31 @@
+[project]
+name = "nyc-taxi-regression"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "PedroBSanchez", email = "pedro_b47@hotmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard]>=0.141.1",
+    "kagglehub[pandas-datasets]>=1.0.2",
+    "mangum>=0.21.0",
+    "pandas>=3.0.5",
+    "pydantic>=2.13.4",
+    "pydantic-settings>=2.7.0",
+    "scikit-learn>=1.9.0",
+    "uvicorn>=0.52.4",
+]
+
+[project.scripts]
+nyc-taxi-regression = "nyc_taxi_regression:main"
+
+[build-system]
+requires = ["uv_build>=0.12.2,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "boto3>=1.40",
+]

@@ -1,0 +1,77 @@
+name: CI
+
+# so em PR para main. Nada aqui escreve na AWS: e leitura + build local.
+on:
+    pull_request: 
+        branches: [main]
+
+# o GITHUB_TOKEN nasce so com leitura; cada job pede o que precisa alem disso
+permissions: 
+    contents: read
+
+# PR com varios pushes seguidos: cancela o run anterior em vez de deixar dois
+# terraform plan disputando o mesmo lock no S3
+concurrency: 
+    group: ci-${{github.ref}}
+    cancel-in-progress: true
+
+env:
+    AWS_REGION: us-east1
+    TF_IN_AUTOMATION: "true"
+
+jobs:
+    docker:
+        name: image building
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v4
+
+             # mesmo build do deploy, so que sem push: se quebrar aqui, quebraria na main
+            - name: docker build
+              run: docker build -t nyc-taxi-regression:ci .
+    
+    terraform:
+        name: terraform plan
+        runs-on: ubuntu-latest
+
+        permissions: 
+            contents: read
+            id-token: write # sem isto o runner nao consegue nem PEDIR o token OIDC
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: image tag
+              id: image
+              run: echo "tag${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+            # troca o token OIDC do GitHub por credencial temporaria do STS
+
+            - uses: aws-actions/configure-aws-credential@v4
+              with:
+                  role-to-assume: ${{ vars.AWS_ROLE_ARN}}
+                  aws-region: ${{ env.AWS_REGION }}
+
+
+            - uses: hashicorp/setup-terraform@v3
+              with:
+                  terraform_version: 1.15.9
+
+            - name: fmt
+              working-directory: infra
+              run: terraform fmt -check -recursive
+
+            - name: init
+              working-directory: infra
+              run: terraform init -input=false
+            
+            - name: validate
+              working-directory: infra
+              run: terraform validate
+
+            - name: plan
+              working-directory: infra
+              run: |
+                terraform plan -input=false -lock-timeout=5m \
+                    -var="image_tag=${{ steps.image.outputs.tag }}"
