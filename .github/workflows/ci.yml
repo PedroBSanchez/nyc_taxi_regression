@@ -44,7 +44,9 @@ jobs:
 
             - name: image tag
               id: image
-              run: echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT" 
+              run: |
+                   echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT" 
+                   echo "role recebida: [${{ vars.AWS_ROLE_ARN }}]"
 
             # troca o token OIDC do GitHub por credencial temporaria do STS
 
