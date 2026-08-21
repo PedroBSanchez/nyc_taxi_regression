@@ -1,0 +1,111 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# um deploy por vez. cancel-in-progress FALSE de proposito: cancelar um
+# terraform apply pela metade e a melhor forma de corromper o state.
+concurrency:
+  group: cd-prod
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  TF_IN_AUTOMATION: "true"
+
+jobs:
+  deploy:
+    name: build, push e apply
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: image tag
+        id: image
+        run: echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: login no ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # o repositorio e IMMUTABLE: publicar a mesma tag duas vezes e recusado.
+      # isso acontece de verdade quando voce usa "Re-run jobs" num run que
+      # falhou depois do push.
+      - name: a imagem desta tag ja existe?
+        id: check
+        env:
+          TAG: ${{ steps.image.outputs.tag }}
+        run: |
+          if aws ecr describe-images \
+               --repository-name nyc-taxi-regression-prod \
+               --image-ids imageTag="$TAG" >/dev/null 2>&1; then
+            echo "existe=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "existe=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: build e push
+        if: steps.check.outputs.existe == 'false'
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: ${{ steps.image.outputs.tag }}
+        run: |
+          IMAGE="$REGISTRY/nyc-taxi-regression-prod:$TAG"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.9
+
+      - name: init
+        working-directory: infra
+        run: terraform init -input=false
+
+      - name: apply
+        working-directory: infra
+        run: |
+          terraform apply -input=false -auto-approve -lock-timeout=5m \
+            -var="image_tag=${{ steps.image.outputs.tag }}"
+
+      # deploy so termina quando a API responde. sem isto, um erro que so
+      # aparece em runtime (import quebrado, modelo ausente) passaria batido.
+      - name: smoke test
+        working-directory: infra
+        run: |
+          URL=$(terraform output -raw api_endpoint)
+          URL="${URL%/}"
+
+          BODY='{"passenger_count":2,"pickup_longitude":-73.98,
+                 "pickup_latitude":40.75,"vendor_id":2,
+                 "pickup_datetime":"2016-06-01T12:00:00Z"}'
+
+          for tentativa in 1 2 3; do
+            CODE=$(curl -sS -o /tmp/resposta.json -w '%{http_code}' \
+              -X POST "$URL/predict" \
+              -H 'content-type: application/json' \
+              -d "$BODY" || echo 000)
+
+            echo "tentativa $tentativa -> HTTP $CODE"
+            cat /tmp/resposta.json; echo
+
+            [ "$CODE" = "200" ] && exit 0
+            sleep 10
+          done
+
+          echo "API nao respondeu 200 apos o deploy"
+          exit 1

@@ -16,7 +16,7 @@ concurrency:
     cancel-in-progress: true
 
 env:
-    AWS_REGION: us-east1
+    AWS_REGION: us-east-1
     TF_IN_AUTOMATION: "true"
 
 jobs:
@@ -44,11 +44,12 @@ jobs:
 
             - name: image tag
               id: image
-              run: echo "tag${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+              run: echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT" 
+              
 
             # troca o token OIDC do GitHub por credencial temporaria do STS
 
-            - uses: aws-actions/configure-aws-credential@v4
+            - uses: aws-actions/configure-aws-credentials@v4
               with:
                   role-to-assume: ${{ vars.AWS_ROLE_ARN}}
                   aws-region: ${{ env.AWS_REGION }}
