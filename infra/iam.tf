@@ -41,6 +41,7 @@ data "aws_iam_policy_document" "lambda_ssm" {
     # wildcard no prefixo: parametro novo ja nasce legivel, sem mexer no IAM
     resources = [
       "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter${local.ssm_prefix}/*",
+      "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter${local.ssm_prefix}/*",
     ]
   }
 
