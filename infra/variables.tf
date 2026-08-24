@@ -28,7 +28,7 @@ variable "app_config" {
   type        = map(string)
 
   default = {
-    client_url = "https://app.exemplo.com"
+    client_url = "https://pedrobsanchez.netlify.app"
   }
 }
 
